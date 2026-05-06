@@ -13,7 +13,7 @@ Run Thaum on **any** conformant Kubernetes cluster (on-premises, EKS, GKE, AKS, 
 |---------------|--------|
 | **Replicas** | You may run **more than one** pod; Thaum uses **[server.election]** so only one leader performs webhook registration and similar work (see architecture doc). Do not scale out without understanding election and shared DB semantics. |
 | **Database** | **Bundled PostgreSQL** inside the stock image is a poor fit for HA on Kubernetes (storage, restarts). **Prefer an external Postgres** reachable from the cluster. |
-| **Ingress / TLS** | Expose the Service with an Ingress (or Gateway API) and terminate TLS at the edge; set **`[server].base_url`** to the public HTTPS URL (or use **`THAUM_BASE_URL`**—see below). |
+| **Ingress / TLS** | Expose the Service with an Ingress (or Gateway API) and terminate TLS at the edge; set **`[server].base_url`** or **`THAUM_BASE_URL`** to the public HTTPS URL. **`THAUM_BASE_URL` overrides `base_url`** when both are set (see below). |
 
 ## Container contract
 
@@ -24,7 +24,7 @@ Run Thaum on **any** conformant Kubernetes cluster (on-premises, EKS, GKE, AKS, 
 ## Configuration and secrets
 
 - Mount **`thaum.conf`** at **`/etc/thaum/thaum.conf`** (or set **`THAUM_CONFIG_FILE`**). Build the file from [systemd/thaum.conf.example](../systemd/thaum.conf.example); use **`env:`** and **`file:`** references so secrets are not baked into ConfigMaps.
-- **`base_url`**: Set **`[server].base_url`** in TOML to your public URL, **or** rely on **`THAUM_BASE_URL`** in the environment. There is **no** Kubernetes-specific auto-detection in [`thaum.types._resolve_base_url`](../../thaum/types.py) (unlike some cloud PaaS env vars). For Ingress hosts, set **`THAUM_BASE_URL=https://<your-hostname>`** explicitly.
+- **`base_url`**: Set **`[server].base_url`** in TOML, **or** omit it and set **`THAUM_BASE_URL`** in the environment ( **`THAUM_BASE_URL` wins** when both are set). There is **no** Kubernetes-specific auto-detection in [`thaum.types._resolve_base_url`](../../thaum/types.py) (unlike some cloud PaaS env vars). For Ingress hosts, **`THAUM_BASE_URL=https://<your-hostname>`** is a common choice.
 
 ## Database: external Postgres (recommended)
 

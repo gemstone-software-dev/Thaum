@@ -63,7 +63,8 @@ def main() -> None:
                 "--test-config: full validation including secret resolution and a SELECT 1 DB check; "
                 "run on the target host with secrets available.\n"
                 "Encrypted config values still require set_keyctx_resolver at runtime.\n"
-                "base_url may require THAUM_BASE_URL or explicit base_url in cloud CI."
+                "[server].base_url is optional when THAUM_BASE_URL or a supported cloud env provides the URL; "
+                "when THAUM_BASE_URL is set it overrides base_url. CI may set THAUM_BASE_URL for --schema-check."
             ),
         )
         mode = parser.add_mutually_exclusive_group(required=True)

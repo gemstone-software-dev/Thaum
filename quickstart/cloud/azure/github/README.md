@@ -172,14 +172,14 @@ Configure Container Apps probes to hit `/ready` (or `/health`) on port **5165**.
 ## Configuration file
 
 1. Start from [systemd/thaum.conf.example](../../../systemd/thaum.conf.example).
-2. Set **`[server].base_url`** to your Container App’s public URL.
+2. Set **`[server].base_url`** to your Container App’s public URL, **or** omit `base_url` and set **`THAUM_BASE_URL`** at runtime (env overrides TOML when both are set).
 3. Save it in your deploy repo as **`thaum.toml`**. [Dockerfile.example](Dockerfile.example) copies it to **`/etc/thaum/thaum.toml`**.
 
 Keep sensitive values out of Git: use **`secret:<key>`** with the Key Vault–backed mount flow above (not inline tokens in `az containerapp secret set` for production).
 
 ### `THAUM_BASE_URL` in CI
 
-If your pipeline substitutes `base_url` via environment at build time, some checks may expect **`THAUM_BASE_URL`**; see `thaum_config_check.py` epilog in the main repo.
+Pipelines often set **`THAUM_BASE_URL`** so the public URL does not live in Git; it **overrides** `[server].base_url` when both are set. **`--schema-check`** in `thaum_config_check.py` may rely on **`THAUM_BASE_URL`** when `base_url` is omitted from TOML; see that script’s epilog in the main repo.
 
 ## Dockerfile (deploy repo)
 

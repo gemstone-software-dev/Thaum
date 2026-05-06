@@ -57,28 +57,50 @@ BaseUrlSource = StrEnum(
 )
 
 
+def _strip_base_url_candidate(value: Optional[str]) -> Optional[str]:
+    """Treat None, empty, and whitespace-only as unset."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
+
+
 def _resolve_base_url(config_base_url: Optional[str]) -> tuple[str, BaseUrlSource]:
     """
-    Returns the resolved URL and its source of truth.
-    Strict fail-fast implementation.
-    """
-    if config_base_url:
-        return config_base_url.rstrip('/'), BaseUrlSource.CONFIG
+    Resolve the public base URL and its source of truth.
 
-    if env_url := os.environ.get("THAUM_BASE_URL"):
-        return env_url.rstrip('/'), BaseUrlSource.ENVIRONMENT
+    Precedence (first non-empty wins):
+
+    1. ``THAUM_BASE_URL`` — overrides ``[server].base_url`` when set.
+    2. Non-empty ``[server].base_url`` from config (may be omitted in TOML).
+    3. PaaS: Cloud Run ``K_SERVICE`` + ``K_SERVICE_URL``, Azure ``WEBSITE_HOSTNAME``,
+       AWS App Runner ``AWS_APP_RUNNER_SERVICE_URL``.
+
+    Raises ``ValueError`` if nothing yields a non-empty URL.
+    """
+    if env_url := _strip_base_url_candidate(os.environ.get("THAUM_BASE_URL")):
+        return env_url.rstrip("/"), BaseUrlSource.ENVIRONMENT
+
+    if cfg_url := _strip_base_url_candidate(config_base_url):
+        return cfg_url.rstrip("/"), BaseUrlSource.CONFIG
 
     if "K_SERVICE" in os.environ:
-        return os.environ.get("K_SERVICE_URL", "").rstrip('/'), BaseUrlSource.GOOGLE
+        if g_url := _strip_base_url_candidate(os.environ.get("K_SERVICE_URL")):
+            return g_url.rstrip("/"), BaseUrlSource.GOOGLE
 
     if "WEBSITE_HOSTNAME" in os.environ:
-        return f"https://{os.environ['WEBSITE_HOSTNAME']}".rstrip('/'), BaseUrlSource.AZURE
+        if az_host := _strip_base_url_candidate(os.environ.get("WEBSITE_HOSTNAME")):
+            return f"https://{az_host}".rstrip("/"), BaseUrlSource.AZURE
 
     if "AWS_APP_RUNNER_SERVICE_URL" in os.environ:
-        return os.environ["AWS_APP_RUNNER_SERVICE_URL"].rstrip('/'), BaseUrlSource.AWS
+        if aws_url := _strip_base_url_candidate(os.environ.get("AWS_APP_RUNNER_SERVICE_URL")):
+            return aws_url.rstrip("/"), BaseUrlSource.AWS
 
     logger.critical("No base_url configured and no cloud environment detected.")
-    raise ValueError("System cannot determine public Base URL. Configure base_url or THAUM_BASE_URL.")
+    raise ValueError(
+        "System cannot determine public Base URL. Set [server].base_url, or set THAUM_BASE_URL, "
+        "or run on a supported cloud host with its service URL in the environment."
+    )
 
 class LogLevel(IntEnum):
     # Custom levels match former verboselogs ordering (between DEBUG/INFO/WARNING).
@@ -206,7 +228,8 @@ class ServerElectionConfig(BaseModel):
 
 
 class ServerConfig(BaseModel):
-    base_url: str
+    # Optional in TOML; after ``resolve_url`` this is always a non-empty str (or validation raises).
+    base_url: Optional[str] = None
     url_source: Optional[BaseUrlSource] = None
     bot_url_prefix: Optional[str] = '/bot'
     bot_type: str
