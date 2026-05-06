@@ -1,5 +1,28 @@
 # Thaum release notes
 
+## v0.6.1 — 2026-05-06
+
+Maintenance release. **`pyproject.toml`** is **`0.6.1`**.
+
+### Changes since tag v0.6.0
+
+- **Server / config** — **`[server].base_url`** may be omitted in TOML when **`THAUM_BASE_URL`** is set at runtime; clearer precedence and URL candidate normalization in **`thaum.types.ServerConfig`** (**`_resolve_base_url`**, **`_strip_base_url_candidate`**).
+- **Docs / samples** — Azure GitHub and Kubernetes quickstart READMEs, **`sample.thaum.toml`**, and **`thaum_config_check.py`** wording aligned with env vs TOML **`base_url`** behavior (**`--schema-check`** when **`base_url`** is omitted).
+- **Tests** — **`tests/test_server_config_base_url.py`** exercises server **`base_url`** resolution.
+
+### Dependencies
+
+Unchanged from **v0.6.0**: **`gemstone_utils`** **`v0.4.0rc1`** (**`pyproject.toml`**, **`requirements.txt`**, **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**).
+
+### Upgrade from v0.6.0
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.6.1`**.
+- **Containers**: rebuild or pull an image tagged **`0.6.1`** when published.
+
+No manual schema migration is required for the default layout (**`init_db`** creates ORM tables on startup).
+
+---
+
 ## v0.6.0 — 2026-05-02
 
 First **stable 0.6.x** release. **`pyproject.toml`** is **`0.6.0`**.
