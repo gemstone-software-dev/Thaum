@@ -90,6 +90,8 @@ lookup_plugin = "null"
 
 # Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
 # connection → defaults → plugin/bot. Optional: connection_ref on lookup and on [defaults.alert.jira] points here.
+# Atlassian fields (site_url/cloud_id/org_id/user/api_token) support resolver prefixes such as
+# env:VAR, file:/path, and secret:key in addition to inline values.
 # Use secret:key for mounted secret files (systemd credentials, Azure Container Apps mounts, Kubernetes secrets).
 # Azure Key Vault secret names allow only alphanumeric characters and hyphens (no underscores); use camelCase
 # (or kebab-case) for keys you will store in Key Vault so the same key works in thaum.toml and mounted filenames.
@@ -121,6 +123,7 @@ connection_ref = "example-atlassian"
 # Bearer for POST {base_url}/alerts/<bot_key>/status (canonical JSON pattern). Empty disables verification.
 status_webhook_bearer = ""
 # Default empty; each Jira bot normally sets responders under [bots.<id>.alert].
+# Each responders array element also supports resolver prefixes (env:/file:/secret:).
 responders = []
 
 # --- Built-in defaults (uncomment to override) ---
@@ -151,6 +154,7 @@ alert_type = "jira"
 # Set to an empty string ("") to disable sending this message.
 # customer_service_message_template = "Thank you for your patience.  The next available person from {{ team_description }} will be with you shortlly."
 # Who is invited into new incident rooms (lookup resolves team:/person: / email).
+# Each responders array element supports resolver prefixes (env:/file:/secret:).
 responders = ["team:DBA"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).

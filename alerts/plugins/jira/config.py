@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from alerts.base import BaseAlertPluginConfig
-from thaum.types import ResolvedSecret
+from thaum.types import OptionalResolvedSecret, ResolvedSecret, ResolvedStringList
 
 _DEFAULT_STATUS_ACK = (
     "{{ responder_mention }} has acknowledged the alert and should be joining you shortly. "
@@ -33,11 +33,11 @@ class JiraAlertPluginConfig(BaseAlertPluginConfig):
             "Requires site_url, cloud_id, user, and api_token after merge."
         ),
     )
-    site_url: str
-    cloud_id: str
-    user: str
+    site_url: OptionalResolvedSecret
+    cloud_id: OptionalResolvedSecret
+    user: OptionalResolvedSecret
     api_token: ResolvedSecret
-    responders: list[str]
+    responders: ResolvedStringList
     priority_normal: str = "P3"
     priority_high: str = "P2"
     status_webhook_bearer: str

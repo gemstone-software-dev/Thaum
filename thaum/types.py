@@ -46,8 +46,19 @@ def _optional_resolved_secret(v: object) -> Optional[str]:
     return str(resolve_secret(s))
 
 
+def _resolved_list_entry(v: object) -> str:
+    s = str(v).strip()
+    if not s:
+        return ""
+    if config_schema_only.get():
+        return s
+    return str(resolve_secret(s))
+
+
 ResolvedSecret = Annotated[SecretStr, BeforeValidator(_resolved_secret_before)]
 OptionalResolvedSecret = Annotated[Optional[str], BeforeValidator(_optional_resolved_secret)]
+ResolvedListEntry = Annotated[str, BeforeValidator(_resolved_list_entry)]
+ResolvedStringList = List[ResolvedListEntry]
 
 logger = logging.getLogger("thaum.types")
 

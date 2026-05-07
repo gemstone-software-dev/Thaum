@@ -22,19 +22,19 @@ class AtlassianConnectionConfig(BaseConnectionConfig):
 
     plugin: Literal["atlassian"] = "atlassian"
 
-    site_url: Optional[str] = Field(
+    site_url: OptionalResolvedSecret = Field(
         default=None,
         description="Jira/Confluence site base URL, e.g. https://your-site.atlassian.net",
     )
-    cloud_id: Optional[str] = Field(
+    cloud_id: OptionalResolvedSecret = Field(
         default=None,
         description="Atlassian Cloud UUID (site id) for api.atlassian.com paths.",
     )
-    org_id: Optional[str] = Field(
+    org_id: OptionalResolvedSecret = Field(
         default=None,
         description="Atlassian organization id (Public Teams and org-scoped APIs).",
     )
-    user: Optional[str] = Field(
+    user: OptionalResolvedSecret = Field(
         default=None,
         description="Account email for REST API token auth (Basic).",
     )

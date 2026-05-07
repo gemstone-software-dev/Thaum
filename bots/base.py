@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import logging
 from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING, Union
-from thaum.types import ThaumPerson, RespondersList
+from thaum.types import ThaumPerson, RespondersList, ResolvedStringList
 from dataclasses import dataclass, field
 from pydantic import BaseModel, model_validator
 import re
@@ -178,7 +178,7 @@ class BaseChatBotConfig(BaseModel):
     endpoint: str
     high_pri_on: Optional[bool] = True
     send_alerts: Optional[bool] = True
-    responders: List[str]
+    responders: ResolvedStringList
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
     customer_service_message_template: Optional[str] = (
         "Thank you for your patience.  The next available person from "

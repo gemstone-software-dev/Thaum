@@ -8,6 +8,8 @@ Thaum can integrate with **Atlassian Cloud** using:
 
 **`[defaults.alert.jira]`** (and per-bot **`[bots.<id>.alert]`**) may set **`connection_ref`** to the same **`[connections.*]`** name as lookup, or override individual keys after that merge. Use **one** API token credential for both when the token is stored once in systemd credentials (e.g. **`secret:atlassian-api-token`**).
 
+For orgs that do not want tenant metadata in Git, Thaum accepts resolver prefixes (for example `env:`, `file:`, `secret:`) for Atlassian fields including **`site_url`**, **`cloud_id`**, **`org_id`**, **`user`**, and **`api_token`**. Responder list entries under bot config and Jira alert config also support resolver prefixes per element.
+
 ## Finding **`cloud_id`** (site id)
 
 The **Cloud id** is a UUID Atlassian uses in URLs such as `https://api.atlassian.com/jsm/ops/api/{cloud_id}/...`.

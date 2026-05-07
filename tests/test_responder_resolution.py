@@ -5,16 +5,18 @@ from __future__ import annotations
 
 import logging
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from pydantic import SecretStr
 
 from alerts.plugins.jira.config import JiraAlertPluginConfig
 from alerts.plugins.jira.payload import responders_list_to_jira_payload
 from alerts.plugins.jira.plugin import JiraPlugin
+from bots.base import BaseChatBotConfig
+from connections.plugins.atlassian import AtlassianConnectionConfig
 from lookup.base import BaseLookupPlugin
 from thaum.db_bootstrap import init_app_db
-from thaum.types import RespondersList, ThaumPerson, ThaumTeam
+from thaum.types import RespondersList, ThaumPerson, ThaumTeam, schema_only_validation
 
 
 class _LookupTestPlugin(BaseLookupPlugin):
@@ -139,6 +141,77 @@ class JiraResponderPayloadTest(unittest.TestCase):
         self.assertEqual(payload, [{"type": "user", "id": "acct-42"}])
         resolver.assert_not_called()
     # -- End Method test_payload_prefers_jira_platform_id_for_person
+
+
+class SensitiveConfigSecretResolutionTest(unittest.TestCase):
+    def test_atlassian_sensitive_fields_resolve(self) -> None:
+        def _fake_resolve_secret(value: str) -> str:
+            return f"resolved:{value}"
+
+        with patch("thaum.types.resolve_secret", side_effect=_fake_resolve_secret):
+            cfg = AtlassianConnectionConfig(
+                plugin="atlassian",
+                site_url="secret:site-url",
+                cloud_id="secret:cloud-id",
+                org_id="secret:org-id",
+                user="secret:login-email",
+                api_token="secret:api-token",
+            )
+
+        self.assertEqual(cfg.site_url, "resolved:secret:site-url")
+        self.assertEqual(cfg.cloud_id, "resolved:secret:cloud-id")
+        self.assertEqual(cfg.org_id, "resolved:secret:org-id")
+        self.assertEqual(cfg.user, "resolved:secret:login-email")
+        self.assertEqual(cfg.api_token, "resolved:secret:api-token")
+
+    def test_responder_entries_resolve_for_bot_and_jira(self) -> None:
+        def _fake_resolve_secret(value: str) -> str:
+            return f"resolved:{value}"
+
+        with patch("thaum.types.resolve_secret", side_effect=_fake_resolve_secret):
+            bot_cfg = BaseChatBotConfig(
+                handle="test",
+                endpoint="https://thaum.example.invalid/bot/test",
+                send_alerts=False,
+                high_pri_on=False,
+                alert_type="null",
+                responders=["secret:team-ref", "secret:person-ref"],
+                team_description="Test Team",
+                emergency_warning_message="",
+            )
+            jira_cfg = JiraAlertPluginConfig(
+                plugin="jira",
+                site_url="secret:site-url",
+                cloud_id="secret:cloud-id",
+                user="secret:login-email",
+                api_token=SecretStr("token"),
+                responders=["secret:team-ref", "secret:person-ref"],
+                status_webhook_bearer="",
+                send_escalate_msg=False,
+            )
+
+        self.assertEqual(bot_cfg.responders, ["resolved:secret:team-ref", "resolved:secret:person-ref"])
+        self.assertEqual(jira_cfg.responders, ["resolved:secret:team-ref", "resolved:secret:person-ref"])
+
+    def test_schema_only_mode_keeps_sensitive_refs_unresolved(self) -> None:
+        with patch("thaum.types.resolve_secret") as mock_resolve:
+            with schema_only_validation():
+                cfg = JiraAlertPluginConfig(
+                    plugin="jira",
+                    site_url="secret:site-url",
+                    cloud_id="secret:cloud-id",
+                    user="secret:login-email",
+                    api_token="secret:api-token",
+                    responders=["secret:team-ref", "secret:person-ref"],
+                    status_webhook_bearer="",
+                    send_escalate_msg=False,
+                )
+        mock_resolve.assert_not_called()
+        self.assertEqual(cfg.site_url, "secret:site-url")
+        self.assertEqual(cfg.cloud_id, "secret:cloud-id")
+        self.assertEqual(cfg.user, "secret:login-email")
+        self.assertEqual(cfg.responders, ["secret:team-ref", "secret:person-ref"])
+        self.assertEqual(cfg.api_token.get_secret_value(), "secret:api-token")
 
 
 if __name__ == "__main__":

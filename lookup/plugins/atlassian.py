@@ -32,10 +32,10 @@ class AtlassianLookupPluginConfig(BaseLookupPluginConfig):
 
     connection_ref: Optional[str] = None
 
-    site_url: Optional[str] = None
-    cloud_id: Optional[str] = None
-    org_id: Optional[str] = None
-    user: Optional[str] = None
+    site_url: OptionalResolvedSecret = None
+    cloud_id: OptionalResolvedSecret = None
+    org_id: OptionalResolvedSecret = None
+    user: OptionalResolvedSecret = None
     api_token: OptionalResolvedSecret = None
 
     teams_page_size: int = Field(default=50, ge=1, le=50, description="Public Teams API page size (max 50).")
