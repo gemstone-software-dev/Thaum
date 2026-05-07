@@ -117,6 +117,50 @@ class JiraPayloadTest(unittest.TestCase):
         self.assertEqual(ep["short_id"], "ABCD")
         self.assertEqual(set(ep.keys()), {"sender", "short_id"})
     # -- End Method test_build_trigger_alert_body_includes_string_sender
+
+    def test_build_trigger_alert_body_normal_has_no_tags(self) -> None:
+        sender = ThaumPerson(
+            email="r@example.com",
+            display_name="Requester",
+            platform_ids={},
+        )
+        body = build_trigger_alert_body(
+            summary="Something broke",
+            bot_handle="ThaumBot",
+            room_id="room-1",
+            sender=sender,
+            priority=AlertPriority.NORMAL,
+            priority_normal="P3",
+            priority_high="P2",
+            short_id="ABCD",
+            responders_payload=[],
+            bot_key="bk",
+            plugin_name="webex",
+        )
+        self.assertNotIn("tags", body)
+
+    def test_build_trigger_alert_body_high_priority_includes_tags(self) -> None:
+        sender = ThaumPerson(
+            email="r@example.com",
+            display_name="Requester",
+            platform_ids={},
+        )
+        body = build_trigger_alert_body(
+            summary="Critical",
+            bot_handle="ThaumBot",
+            room_id="room-1",
+            sender=sender,
+            priority=AlertPriority.HIGH,
+            priority_normal="P3",
+            priority_high="P2",
+            short_id="WXYZ",
+            responders_payload=[],
+            bot_key="bk",
+            plugin_name="webex",
+        )
+        self.assertEqual(body["priority"], "P2")
+        self.assertEqual(body["tags"], ["OverrideQuietHours", "HighPriority"])
+    # -- End Method test_build_trigger_alert_body_high_priority_includes_tags
 # -- End Class JiraPayloadTest
 
 

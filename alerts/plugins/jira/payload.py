@@ -124,6 +124,6 @@ def build_trigger_alert_body(
         },
     }
     if priority == AlertPriority.HIGH:
-        alert["tags"] = ["OverrideQuietHours"]
+        alert["tags"] = ["OverrideQuietHours", "HighPriority"]
     return alert
 # -- End Function build_trigger_alert_body

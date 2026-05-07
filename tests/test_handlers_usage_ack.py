@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 from jinja2 import Template
 
 from thaum.handlers import ALERT_COMMAND_PATTERN, USAGE_TEMPLATE, bind_thaum_handlers
-from thaum.types import ThaumPerson
+from thaum.types import AlertPriority, ThaumPerson
 
 
 class _StubAlertPlugin:
@@ -24,14 +24,14 @@ class _StubAlertPluginNoAck:
 class _AlertPluginWithId:
     supports_acknowledge = False
 
-    def trigger_alert(self, _msg, _room_id, _person):
+    def trigger_alert(self, _msg, _room_id, _person, _priority=None):
         return ("ZXCV", "jira-id")
 
 
 class _AlertPluginNoId:
     supports_acknowledge = True
 
-    def trigger_alert(self, _msg, _room_id, _person):
+    def trigger_alert(self, _msg, _room_id, _person, _priority=None):
         return ("", None)
 
 
@@ -47,6 +47,18 @@ class UsageTemplateAckTest(unittest.TestCase):
         self.assertIn("ack alert_id", rendered)
         self.assertIn("Produces an alert ID for tracking", rendered)
         self.assertIn("on-call[: message]", rendered)
+        self.assertNotIn("alert![: message]", rendered)
+
+    def test_usage_includes_alert_bang_when_high_priority_enabled(self) -> None:
+        bot = MagicMock()
+        bot.send_alerts = True
+        bot.team_description = "SRE"
+        bot.high_pri_on = True
+        bot.handle = "ThaumBot"
+        bot.emergency_warning_message = ""
+        rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=False)
+        self.assertIn("alert![: message]", rendered)
+        self.assertIn("emergency[: summary]", rendered)
 
     def test_usage_omits_ack_when_not_supported(self) -> None:
         bot = MagicMock()
@@ -139,6 +151,7 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
             "X Person needs you in Room A: test issue",
             "room-1",
             ctx.person,
+            AlertPriority.NORMAL,
         )
         bot.say.assert_called_once_with("room-1", "Alert sent. Tracking ID: **ZXCV**")
 
@@ -155,6 +168,7 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
             "X Person needs you in Room A: test issue",
             "room-2",
             ctx.person,
+            AlertPriority.NORMAL,
         )
         bot.say.assert_called_once_with("room-2", "Alert sent.")
 
@@ -175,7 +189,46 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
                     "X Person needs you in Room A: ping",
                     "room-x",
                     ctx.person,
+                    AlertPriority.NORMAL,
                 )
+
+    def test_alert_bang_pattern_matches_and_on_call_bang_does_not(self) -> None:
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        self.assertIsNotNone(alert_pat.match("alert!: urgent"))
+        self.assertIsNotNone(alert_pat.match("alert!"))
+        self.assertIsNone(alert_pat.match("on-call!: ping"))
+        self.assertIsNone(alert_pat.match("oncall!: ping"))
+
+    def test_alert_bang_uses_high_priority_when_enabled(self) -> None:
+        bot, routes = self._build_bot(_AlertPluginWithId())
+        bot.high_pri_on = True
+        bind_thaum_handlers(bot)
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        alert_handler = next(fn for pattern, fn in routes if pattern.pattern == alert_pat.pattern)
+        ctx = SimpleNamespace(room_id="room-hi", person=self._person())
+        match = alert_pat.search("alert!: production down")
+        self.assertIsNotNone(match)
+        alert_handler(bot, ctx, match)
+        bot.alert_plugin.trigger_alert.assert_called_once_with(
+            "X Person needs you in Room A: production down",
+            "room-hi",
+            ctx.person,
+            AlertPriority.HIGH,
+        )
+
+    def test_alert_bang_rejected_when_high_priority_disabled(self) -> None:
+        bot, routes = self._build_bot(_AlertPluginWithId())
+        bot.high_pri_on = False
+        bind_thaum_handlers(bot)
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        alert_handler = next(fn for pattern, fn in routes if pattern.pattern == alert_pat.pattern)
+        ctx = SimpleNamespace(room_id="room-no", person=self._person())
+        match = alert_pat.search("alert!: nope")
+        self.assertIsNotNone(match)
+        alert_handler(bot, ctx, match)
+        bot.alert_plugin.trigger_alert.assert_not_called()
+        bot.say.assert_called_once()
+        self.assertIn("not enabled", bot.say.call_args[0][1].lower())
 
 
 if __name__ == "__main__":

@@ -113,7 +113,8 @@ def _incident_prompt_card(
 
 
 # Alert command: usage documents ``on-call``; ``alert``, ``oncall``, and ``on_call`` are synonyms.
-ALERT_COMMAND_PATTERN = r"^(?P<cmd>alert|on[-_]?call)(?:\s*:\s*(?P<msg>.*))?$"
+# ``alert!`` is high priority (``alert!`` before ``alert`` so the exclamation form matches first).
+ALERT_COMMAND_PATTERN = r"^(?P<cmd>alert!|alert|on[-_]?call)(?:\s*:\s*(?P<msg>.*))?$"
 
 
 # Define the template globally (or in a separate file if it gets too long)
@@ -126,6 +127,8 @@ help[: summary]
 {% if bot.high_pri_on %}
 emergency[: summary]
   Just like help, but sends a higher priority alert. {{ bot.emergency_warning_message }}
+alert![: message]
+  Like alert, but sends a higher priority on-call alert. Does not create a room.
 {% endif %}
 {% if bot.send_alerts %}
 alert[: message]
@@ -182,13 +185,23 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
 
         @bot.hears(ALERT_COMMAND_PATTERN, priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+            cmd = (match.group("cmd") or "").lower()
+            if cmd == "alert!" and not bot.high_pri_on:
+                bot.say(
+                    ctx.room_id,
+                    "High priority `alert!` is not enabled for this bot. Use `alert` instead.",
+                )
+                return
+            priority = AlertPriority.HIGH if cmd == "alert!" else AlertPriority.NORMAL
             msg = (match.group("msg") or "").strip()
             title = bot.room_title(ctx.room_id)
             if msg:
                 alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
             else:
                 alert_msg = f"{ctx.person.for_display} needs you in {title}"
-            short_id, _alert_id = bot.alert_plugin.trigger_alert(alert_msg, ctx.room_id, ctx.person)
+            short_id, _alert_id = bot.alert_plugin.trigger_alert(
+                alert_msg, ctx.room_id, ctx.person, priority
+            )
             if short_id:
                 bot.say(
                     ctx.room_id,
