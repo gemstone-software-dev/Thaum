@@ -1,5 +1,35 @@
 # Thaum release notes
 
+## v0.7.0a2 (alpha 2) — 2026-05-07
+
+**`pyproject.toml`** is **`0.7.0a2`**.
+
+Second **0.7.x** alpha: high-priority chat alert command, secret-resolver coverage for Atlassian connection / Jira responder fields, and forward-port of the v0.6.1 base-URL handling.
+
+### Highlights since v0.7.0a1
+
+- **Chat — `alert!`** — New high-priority alert command in `thaum.handlers.ALERT_COMMAND_PATTERN`. Routed through `BaseAlertPlugin.trigger_alert(..., AlertPriority.HIGH)` and gated by per-bot `high_pri_on`; if disabled, the bot replies with a hint to use `alert`. Usage help lists `alert![: message]` only when `high_pri_on` is true.
+- **Jira alert tags** — `build_trigger_alert_body` in `alerts/plugins/jira/payload.py` now adds `HighPriority` alongside `OverrideQuietHours` on high-priority alerts so JSM Ops routing rules can target either tag.
+- **Atlassian / Jira — resolved secrets** — `connections.plugins.atlassian.AtlassianConnectionConfig` fields `site_url`, `cloud_id`, `org_id`, and `user` accept resolver prefixes (`OptionalResolvedSecret`); `lookup.plugins.atlassian.AtlassianLookupPluginConfig` matches. `alerts.plugins.jira.config.JiraAlertPluginConfig` `responders` is now `ResolvedStringList` so each entry resolves through `resolve_secret`. New helper `_resolved_list_entry` and aliases `ResolvedListEntry` / `ResolvedStringList` live in `thaum.types`. Schema-only mode (`config_schema_only`) preserves unresolved references.
+- **Server / config (forward-port from v0.6.1)** — `[server].base_url` may be omitted in TOML when `THAUM_BASE_URL` is set; clearer precedence and URL candidate normalization in `thaum.types.ServerConfig` (`_resolve_base_url`, `_strip_base_url_candidate`). Quickstart READMEs, `sample.thaum.toml`, and `scripts/python/thaum_config_check.py` aligned (`--schema-check` when `base_url` is omitted). Covered by `tests/test_server_config_base_url.py`.
+
+### Dependencies
+
+Unchanged from **v0.7.0a1**: **`gemstone_utils`** **`v0.4.0rc1`** (**`pyproject.toml`**, **`requirements.txt`**, **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**).
+
+### Upgrade from v0.7.0a1
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.7.0a2`**.
+- **Containers**: rebuild or pull an image tagged **`0.7.0a2`** when published.
+
+No manual schema migration is required (**`init_db`** creates ORM tables on startup).
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.7.0** stable.
+
+---
+
 ## v0.7.0a1 (alpha 1) — 2026-05-04
 
 **`pyproject.toml`** is **`0.7.0a1`**.
