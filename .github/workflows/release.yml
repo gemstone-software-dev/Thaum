@@ -30,9 +30,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve registry, image, version, and tags
         run: |
@@ -265,7 +265,7 @@ jobs:
 
       - name: Log in to GitHub Container Registry
         if: env.REGISTRY == 'ghcr.io'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -273,7 +273,7 @@ jobs:
 
       - name: Log in to Docker Hub
         if: env.REGISTRY == 'docker.io'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -281,17 +281,17 @@ jobs:
 
       - name: Log in to other registry
         if: env.REGISTRY != 'ghcr.io' && env.REGISTRY != 'docker.io'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push base image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -305,7 +305,7 @@ jobs:
           tags: ${{ env.TAGS }}
 
       - name: Build and push azure image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -319,7 +319,7 @@ jobs:
           tags: ${{ env.TAGS_AZURE }}
 
       - name: Build and push external-db image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -333,7 +333,7 @@ jobs:
           tags: ${{ env.TAGS_EXTERNAL }}
 
       - name: Build and push azure external-db image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -353,7 +353,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build thaum-utils archive
         run: |
@@ -366,6 +366,6 @@ jobs:
           zip -r "thaum-utils-${{ github.ref_name }}.zip" "$STAGING"
 
       - name: Upload release asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: thaum-utils-${{ github.ref_name }}.zip
