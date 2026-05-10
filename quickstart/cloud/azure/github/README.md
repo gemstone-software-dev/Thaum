@@ -24,7 +24,7 @@ Microsoft references for secrets and Key Vault:
 
 ## Prerequisites
 
-- Azure subscription and rights to create resource groups, Container Apps, Key Vault, and (for ACR path) Azure Container Registry
+- Azure subscription and rights to create resource groups, Container Apps, Key Vault, and (for ACR path) Azure Container Registry; permission to **assign RBAC roles** and **manage Key Vault secrets** when following section 3 (see §3a if uploads fail with authorization errors)
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`az login`)
 - A GitHub repository for **your** deployment assets (Dockerfile + config + workflow) if you use the ACR path
 
