@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Print Azure Key Vault base URI (properties.vaultUri), e.g. https://myvault.vault.azure.net/
 # For Azure Container Apps keyvaultref secrets, append: secrets/<SecretName>
-# (<SecretName> must follow Key Vault rules: alphanumeric and hyphens only; use camelCase in the quickstart.)
+# (<SecretName>: lowercase kebab-case fits Key Vault and Azure Container Apps; ACA secret names are max 20 chars.)
 #   Full URI (latest version): https://myvault.vault.azure.net/secrets/MySecret
 # See: https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli
 #

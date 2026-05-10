@@ -2,15 +2,15 @@
 #
 # [server.database].db_url:
 # - Container image with bundled PostgreSQL: you may omit `db_url` to use the default Unix-socket
-#   URL (see docs/ARCHITECTURE.md). Then remove `thaumDbUrl` from systemd credentials and from
+#   URL (see docs/ARCHITECTURE.md). Then remove `thaum-db-url` from systemd credentials and from
 #   thaum.service.d/credentials.conf.
-# - Or keep `db_url = "secret:thaumDbUrl"` and put the bundled URL or an external DSN in the
-#   thaumDbUrl credential. Bundled URL:
+# - Or keep `db_url = "secret:thaum-db-url"` and put the bundled URL or an external DSN in the
+#   thaum-db-url credential. Bundled URL:
 #   postgresql+psycopg://thaum@/thaum?host=/tmp/postgres&client_encoding=utf8
 #
 # Omit-db_url variant (bundled PG in container) — use this OR the active [server.database] below:
 # [server.database]
-# database_vault_passphrase = "secret:thaumDatabaseVaultPassphrase"
+# database_vault_passphrase = "secret:thaum-db-passphrase"
 # data_key_rotate_days = 60
 
 [server]
@@ -19,8 +19,8 @@ bot_type = "webex"
 lookup_plugin = "atlassian"
 
 [server.database]
-db_url = "secret:thaumDbUrl"
-database_vault_passphrase = "secret:thaumDatabaseVaultPassphrase"
+db_url = "secret:thaum-db-url"
+database_vault_passphrase = "secret:thaum-db-passphrase"
 data_key_rotate_days = 60
 
 [logging]
@@ -53,7 +53,7 @@ send_alerts = true
 alert_type = "jira"
 responders = ["team:DBA"]
 emergency_warning_message = ""
-token = "secret:webexTokenDatabase"
+token = "secret:webex-token-database"
 
 [bots.database.alert]
 responders = ["team:DBA"]

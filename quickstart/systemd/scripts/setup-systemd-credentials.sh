@@ -2,8 +2,8 @@
 # Interactive helper for systemd encrypted credentials used by Thaum quickstarts.
 #
 # If you use the container image with bundled PostgreSQL and omit [server.database].db_url
-# in thaum.conf, you do not need thaumDbUrl — press Enter at that prompt to skip, and
-# remove the thaumDbUrl line from thaum.service.credentials.conf (see example comments).
+# in thaum.conf, you do not need thaum-db-url — press Enter at that prompt to skip, and
+# remove the thaum-db-url line from thaum.service.credentials.conf (see example comments).
 
 set -euo pipefail
 
@@ -60,9 +60,9 @@ write_credential_optional() {
 }
 
 echo "Creating encrypted systemd credentials for Thaum."
-write_credential_optional "thaumDbUrl" "Database URL (bundled PG: postgresql+psycopg://thaum@/thaum?host=/tmp/postgres&client_encoding=utf8; sqlite: sqlite:////var/lib/thaum/thaum.db; or Enter to skip if db_url omitted in config)"
-write_credential "thaumDatabaseVaultPassphrase" "Database vault passphrase"
+write_credential_optional "thaum-db-url" "Database URL (bundled PG: postgresql+psycopg://thaum@/thaum?host=/tmp/postgres&client_encoding=utf8; sqlite: sqlite:////var/lib/thaum/thaum.db; or Enter to skip if db_url omitted in config)"
+write_credential "thaum-db-passphrase" "Database vault passphrase"
 write_credential "atlassian-api-token" "Atlassian API token (Jira + connections; one secret for both)"
-write_credential "webexTokenDatabase" "Webex bot token (database bot)"
+write_credential "webex-token-database" "Webex bot token (database bot)"
 
 echo "Done."

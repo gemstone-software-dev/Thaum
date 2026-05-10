@@ -10,7 +10,7 @@ Microsoft references for secrets and Key Vault:
 
 - [Manage secrets in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli) (`keyvaultref`, `secretref`, `--secret-volume-mount`)
 - [`az keyvault secret set`](https://learn.microsoft.com/en-us/cli/azure/keyvault/secret?view=azure-cli-latest#az-keyvault-secret-set)
-- [Key Vault secret names](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) — alphanumeric characters and hyphens only (no underscores); examples below use **camelCase** so the same names work in Key Vault, Container Apps `--secrets`, and `secret:<name>` in `thaum.toml`.
+- [Key Vault secret names](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) — alphanumeric characters and hyphens only (no underscores). **Azure Container Apps** mounted secret names must be **lowercase only**, at most [**20 characters**](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set). Examples below use **kebab-case** so the same names work in Key Vault, Container Apps ([`az containerapp secret set`](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set) `--secrets`), and `secret:<name>` in `thaum.toml`.
 
 ## What you get
 
@@ -75,7 +75,52 @@ az containerapp create `
   --target-port 5165
 ```
 
-If the image is **private**, configure registry credentials or managed identity for your registry per [Container Apps registries](https://learn.microsoft.com/en-us/azure/container-apps/containers#container-registries); that is outside this minimal quickstart.
+#### Path A2: Private GHCR image (bootstrap sequence)
+
+You cannot pull a **private** `ghcr.io/...` image until the Container App has **registry credentials**. Key Vault–backed app secrets also need a **user-assigned managed identity** on the app before `keyvaultref` works. Use a **placeholder public image** first, then swap to Thaum after secrets and registry settings exist.
+
+```powershell
+$APP_NAME = "thaum-app"
+```
+
+Recommended order (aligns with [Container Apps registries](https://learn.microsoft.com/en-us/azure/container-apps/containers#container-registries) and [Manage secrets](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli)):
+
+1. **Environment** — complete [§1](#1-azure-cli-setup) (`containerapp env create`, etc.).
+2. **Key Vault + vault secrets + UAMI + KV RBAC** — complete [§3a](#3a-key-vault-and-secret-values) and [§3b](#3b-user-assigned-identity-and-key-vault-access) first so `$UAMI_ID` and vault URIs exist.
+3. **Create the Container App** with a **small public image** that listens on a known port (not Thaum yet). Example — Azure’s sample listens on **80**:
+
+   ```powershell
+   $PLACEHOLDER = "mcr.microsoft.com/azuredocs/aci-helloworld:latest"
+
+   az containerapp create `
+     --name $APP_NAME `
+     --resource-group $RESOURCE_GROUP `
+     --environment $ENVIRONMENT `
+     --image $PLACEHOLDER `
+     --ingress external `
+     --target-port 80
+   ```
+
+4. **Attach the UAMI** to the app (required before Key Vault references resolve):
+
+   ```powershell
+   az containerapp identity assign `
+     --name $APP_NAME `
+     --resource-group $RESOURCE_GROUP `
+     --user-assigned $UAMI_ID
+   ```
+
+5. **Define Container Apps secrets** — use **`az containerapp secret set`** with `keyvaultref` / `identityref` as in [§3d](#3d-attach-identity-define-key-vault-backed-app-secrets-mount-files-set-thaum_creds_dir) (prefer this command over relying on `containerapp update --secrets`; see §3d).
+
+6. **Configure GHCR auth + Thaum image + mounts + env** — one **`az containerapp update`** (or separate registry/image updates) with:
+   - **`--registry-server ghcr.io`** and **`--registry-username`** / **`--registry-password`** — for GitHub Container Registry, use a [classic PAT or fine-grained token](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) with `read:packages`; username is often your GitHub username or **`GITHUB_USERNAME`** and password the PAT (see GitHub’s GHCR login docs).
+   - **`--image`** — your private image, e.g. `ghcr.io/<org>/<repo>:<tag>`.
+   - **`--target-port 5165`** — Thaum’s HTTP port (replace the placeholder **80**).
+   - **`--secret-volume-mount "/run/secrets"`** and **`--set-env-vars "THAUM_CREDS_DIR=/tmp/thaum-creds"`** as in §3d.
+
+Until step 6 completes, probes may target the wrong port or image; that is expected for the placeholder revision.
+
+If the image is **private** but you already completed the bootstrap above, you only need registry flags when adding or changing private registry images.
 
 ### Path B: Azure Container Registry + GitHub Actions
 
@@ -86,7 +131,7 @@ If the image is **private**, configure registry credentials or managed identity 
    az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic --admin-enabled true
    ```
 
-2. One-time: create the Container App with the **first** image you will push (or a public placeholder), same ingress as Path A, using `myregistry.azurecr.io/<repo>:tag` after your pipeline has pushed at least once—or create the app in the portal and point CI at `az containerapp update --image` as in [deploy.yml.example](deploy.yml.example).
+2. One-time: create the Container App with the **first** image you will push (or a **public placeholder** image and ingress like Path A until ACR has an image—the same bootstrap idea as [Path A2](#path-a2-private-ghcr-image-bootstrap-sequence)), using `myregistry.azurecr.io/<repo>:tag` after your pipeline has pushed at least once—or create the app in the portal and point CI at `az containerapp update --image` as in [deploy.yml.example](deploy.yml.example).
 
 3. Wire CI: copy [deploy.yml.example](deploy.yml.example), set variables (`ACR_LOGIN_SERVER`, `IMAGE_NAME`, `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINERAPP_NAME`), and push; each run builds, schema-checks, pushes to ACR, and updates the app image. This matches the **ACR-remote** tutorial flow ([link](https://learn.microsoft.com/en-us/azure/container-apps/tutorial-code-to-cloud?tabs=bash%2Ccsharp&pivots=acr-remote)).
 
@@ -126,7 +171,7 @@ az role assignment create `
   --scope $KV_ID
 
 # Write each secret from a file (avoids secrets on the command line); delete the file afterward if needed
-az keyvault secret set --vault-name $VAULT_NAME --name webexTokenDatabase --file .\webexTokenDatabase.txt
+az keyvault secret set --vault-name $VAULT_NAME --name webex-token-database --file .\webex-token-database.txt
 ```
 
 For another user’s object ID: `az ad user show --id someone@example.com --query id -o tsv`. For a **service principal** used in CI or automation, use that principal’s **object ID** in Entra ID and **`--assignee-principal-type ServicePrincipal`**.
@@ -155,34 +200,67 @@ For each secret, the URI passed to `keyvaultref` is either:
 - `https://<vault>.vault.azure.net/secrets/<name>` (latest version), or
 - `https://<vault>.vault.azure.net/secrets/<name>/<version-id>` (pinned version)
 
-You can print the vault base URI with [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) and append `/secrets/<name>` (use a `<name>` that satisfies Key Vault naming—**camelCase** in these examples).
+You can print the vault base URI with [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) and append `/secrets/<name>` (use a lowercase **kebab-case** `<name>` that satisfies Key Vault and ACA naming rules above).
 
 ### 3d. Attach identity, define Key Vault–backed app secrets, mount files, set `THAUM_CREDS_DIR`
 
 Thaum runs as user `thaum`. Orchestrator-mounted secret files are often root-readable only; set **`THAUM_CREDS_DIR`** so [docker/entrypoint.sh](../../../../docker/entrypoint.sh) copies `/run/secrets` into a tmpfs directory the app user can read.
 
-Use **`--secret-volume-mount "/run/secrets"`** to mount **all** app-level secrets as files under `/run/secrets` without a YAML file ([Manage secrets — mounting secrets in a volume](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli#mounting-secrets-in-a-volume)). Each file name equals the **Container Apps secret name**; keep those names aligned with `secret:<key>` in `thaum.toml`.
+Use **`--secret-volume-mount "/run/secrets"`** to mount **all** app-level secrets as files under `/run/secrets` without a YAML file ([Manage secrets — mounting secrets in a volume](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli#mounting-secrets-in-a-volume)). Each file name equals the **Container Apps secret name** (**lowercase**, ≤**20** characters); keep those names aligned with `secret:<key>` in `thaum.toml`.
+
+**Defining secrets (`keyvaultref`):** Prefer **`az containerapp secret set`** ([reference](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set)). Some CLI/extension builds expose **`--secrets`** on **`az containerapp create`** or **`az containerapp update`** inconsistently; **`secret set`** is the stable command for adding or updating named secrets.
+
+- **`--secrets`** takes **one** parameter whose value is **space-separated** entries. Each entry is either `Name=literalValue` or **`Name=keyvaultref:<vault-uri>,identityref:<user-assigned-resource-id>`** (commas **inside** that value pair).
+- **Several** Key Vault–backed secrets = **several** space-separated pairs after `--secrets`, for example: `--secrets "botA=keyvaultref:...,identityref:$UAMI_ID" "botB=keyvaultref:...,identityref:$UAMI_ID"`.
+- Container Apps **secret names** are **lowercase-only**, at most **20 characters** ([`az containerapp secret set`](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set)); the examples use **kebab-case** within that limit (same strings as Key Vault secret names in these flows).
+- In PowerShell, quote each `Name=...` pair that contains commas so the shell does not split on them.
+
+Equivalently, **`az containerapp update`** may accept **`--secrets`** with the **same** space-separated format on your CLI version—run **`az containerapp update -h`** and confirm **`--secrets`** appears before relying on it.
 
 **Caveat:** If you need **only a subset** of secrets mounted or **custom filenames** inside the volume, Microsoft documents using **YAML** (`--yaml`) instead of `--secret-volume-mount`.
 
-Example (add `--user-assigned` and `--secrets` / `--secret-volume-mount` / `--set-env-vars` to `create`, or use `az containerapp update` on an existing app):
+After Key Vault secrets exist on the app, attach the volume mount, env, image, and ports (especially when replacing a placeholder image):
 
 ```powershell
 $APP_NAME = "thaum-app"
-$SECRET_URI_DB = "https://$VAULT_NAME.vault.azure.net/secrets/webexTokenDatabase"
+$IMAGE = "ghcr.io/<org>/<repo>:<tag>"
+$SECRET_URI_DB = "https://$VAULT_NAME.vault.azure.net/secrets/webex-token-database"
 
+# 1) Define Key Vault–backed secrets (repeat pairs for each token / secret file)
+az containerapp secret set `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --secrets "webex-token-database=keyvaultref:$SECRET_URI_DB,identityref:$UAMI_ID"
+
+# 2) Apply mount, env, and Thaum runtime (add registry flags when the image is private—see Path A2)
 az containerapp update `
   --name $APP_NAME `
   --resource-group $RESOURCE_GROUP `
-  --user-assigned $UAMI_ID `
-  --secrets "webexTokenDatabase=keyvaultref:$SECRET_URI_DB,identityref:$UAMI_ID" `
+  --image $IMAGE `
+  --target-port 5165 `
   --secret-volume-mount "/run/secrets" `
   --set-env-vars "THAUM_CREDS_DIR=/tmp/thaum-creds"
 ```
 
-Repeat additional `keyvaultref:` pairs in `--secrets` for each bot token (and any other file-backed secrets). If `create` is used instead of `update`, include the same flags together with `--image`, `--environment`, `--ingress`, and `--target-port 5165`.
+For **private GHCR**, add registry authentication on the same `update` (or use `az containerapp registry set`) — see Path A2 above:
 
-In **`thaum.toml`**, use `secret:webexTokenDatabase` (etc.) so `resolve_secret` reads the file copied into `CREDENTIALS_DIRECTORY`.
+```powershell
+# Example: PAT as password (store securely; do not commit)
+az containerapp update `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --image $IMAGE `
+  --registry-server ghcr.io `
+  --registry-username "<github-username>" `
+  --registry-password "<github-pat-with-read-packages>" `
+  --target-port 5165 `
+  --secret-volume-mount "/run/secrets" `
+  --set-env-vars "THAUM_CREDS_DIR=/tmp/thaum-creds"
+```
+
+If `create` is used instead of this split flow, you can pass **`--user-assigned`**, **`--secrets`**, **`--secret-volume-mount`**, and **`--set-env-vars`** together **only when** your CLI supports them on **`containerapp create`**; the bootstrap sequence above avoids that coupling.
+
+In **`thaum.toml`**, use `secret:webex-token-database` (etc.) so `resolve_secret` reads the file copied into `CREDENTIALS_DIRECTORY`.
 
 ## Health checks
 

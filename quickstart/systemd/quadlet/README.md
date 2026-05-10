@@ -29,10 +29,10 @@ Install it as `/etc/thaum/thaum.conf` (or another directory you mount to `/etc/t
 
 Secret-backed keys in this example:
 
-- `[server.database].db_url = "secret:thaumDbUrl"` (optional if you omit `db_url` in config and use bundled PostgreSQL; see comments in [`../thaum.conf.example`](../thaum.conf.example))
-- `[server.database].database_vault_passphrase = "secret:thaumDatabaseVaultPassphrase"`
+- `[server.database].db_url = "secret:thaum-db-url"` (optional if you omit `db_url` in config and use bundled PostgreSQL; see comments in [`../thaum.conf.example`](../thaum.conf.example))
+- `[server.database].database_vault_passphrase = "secret:thaum-db-passphrase"`
 - `[connections.example-atlassian].api_token = "secret:atlassian-api-token"` and matching keys in `[defaults.alert.jira]` (same token secret; see [docs/Atlassian-Jira.md](../../../docs/Atlassian-Jira.md))
-- `[bots.database].token = "secret:webexTokenDatabase"` (credential IDs use **camelCase** so names stay valid if you reuse them as [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) secret names, which allow only alphanumeric characters and hyphens)
+- `[bots.database].token = "secret:webex-token-database"` (credential IDs use lowercase **kebab-case** so names stay valid if you reuse them as [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) or [Azure Container Apps](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set) secret names; ACA names are lowercase-only and at most 20 characters)
 
 ## 3) Create encrypted credentials
 
@@ -44,10 +44,10 @@ sudo ./quickstart/systemd/scripts/setup-systemd-credentials.sh
 
 The script prompts for each value and writes encrypted credentials to:
 
-- `/etc/credstore.encrypted/thaumDbUrl` (optional: press Enter to skip if config omits `db_url`; align the service drop-in)
-- `/etc/credstore.encrypted/thaumDatabaseVaultPassphrase`
+- `/etc/credstore.encrypted/thaum-db-url` (optional: press Enter to skip if config omits `db_url`; align the service drop-in)
+- `/etc/credstore.encrypted/thaum-db-passphrase`
 - `/etc/credstore.encrypted/atlassian-api-token`
-- `/etc/credstore.encrypted/webexTokenDatabase`
+- `/etc/credstore.encrypted/webex-token-database`
 
 ## 4) Install Quadlet files
 
