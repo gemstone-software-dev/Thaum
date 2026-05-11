@@ -12,7 +12,7 @@ readme = "README.md"
 license = "MPL-2.0"
 requires-python = ">=3.11"
 dependencies = [
-    "gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.4.0rc1",
+    "gemstone_utils==0.4.0",
     'tzdata; platform_system == "Windows"',
     "Flask",
     "gunicorn",
@@ -26,7 +26,7 @@ dependencies = [
 
 [project.optional-dependencies]
 azure = [
-    "gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.4.0rc1",
+    "gemstone_utils[azure]==0.4.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -15,7 +15,7 @@ Second **0.7.x** alpha: high-priority chat alert command, secret-resolver covera
 
 ### Dependencies
 
-Unchanged from **v0.7.0a1**: **`gemstone_utils`** **`v0.4.0rc1`** (**`pyproject.toml`**, **`requirements.txt`**, **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**).
+**`gemstone_utils`** **`0.4.0`** from **PyPI** (see **`pyproject.toml`**, **`requirements.txt`**; **`GEMSTONE_UTILS_REF`** in **`Dockerfile`** passes this version for image builds).
 
 ### Upgrade from v0.7.0a1
 

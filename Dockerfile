@@ -20,17 +20,16 @@
 
 ARG PYTHON_VERSION=3.13
 
-# --- build stage: venv, deps from git + requirements, then strip pip ---
+# --- build stage: venv, PyPI deps + requirements, then strip pip ---
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-ARG GEMSTONE_UTILS_REF=v0.4.0rc1
+ARG GEMSTONE_UTILS_REF=0.4.0
 ARG THAUM_ENABLE_AZURE=0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         gcc \
-        git \
         libffi-dev \
         libssl-dev \
         python3-dev \
@@ -42,12 +41,12 @@ COPY requirements.txt .
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
-# Install gemstone_utils from GitHub first; omit any gemstone_utils requirement line from requirements.txt.
+# Install gemstone_utils from PyPI first (with or without [azure]); omit its line from requirements.txt for the rest.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && if [ "${THAUM_ENABLE_AZURE}" = "1" ]; then \
-         GEMSTONE_SPEC="gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}"; \
+         GEMSTONE_SPEC="gemstone_utils[azure]==${GEMSTONE_UTILS_REF}"; \
        else \
-         GEMSTONE_SPEC="gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}"; \
+         GEMSTONE_SPEC="gemstone_utils==${GEMSTONE_UTILS_REF}"; \
        fi \
     && pip install --no-cache-dir "${GEMSTONE_SPEC}" \
     && grep -v '^gemstone_utils' requirements.txt > /tmp/requirements.nopypi-eu.txt \

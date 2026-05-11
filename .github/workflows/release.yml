@@ -88,13 +88,16 @@ jobs:
           with open("requirements.txt", encoding="utf-8") as f:
               for line in f:
                   line = line.strip()
-                  if line.startswith("gemstone_utils") and "git+" in line:
-                      m = re.search(r"@([^#\s]+)", line)
-                      if m:
-                          print(m.group(1))
-                          break
+                  if line.startswith("#") or not line.startswith("gemstone_utils"):
+                      continue
+                  m = re.search(r"==\s*([^#\s;]+)", line)
+                  if m:
+                      print(m.group(1))
+                      break
               else:
-                  raise SystemExit("gemstone_utils pin not found in requirements.txt")
+                  raise SystemExit(
+                      "gemstone_utils==... pin not found in requirements.txt"
+                  )
           PY
           )
 
